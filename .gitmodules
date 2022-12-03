@@ -1,0 +1,6 @@
+[submodule "externals/tiny-json"]
+	path = externals/tiny-json
+	url = https://github.com/rafagafe/tiny-json
+[submodule "externals/Pico_ePaper_Code"]
+	path = externals/Pico_ePaper_Code
+	url = https://github.com/waveshare/Pico_ePaper_Code
