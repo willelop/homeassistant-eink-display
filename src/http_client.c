@@ -63,6 +63,7 @@ void request_website(const char *path, const char *token)
 
 void connect()
 {
+    puts("Attempting to connect");
     cyw43_arch_lwip_begin();
     ip_addr_t resolved;
     err_t response = dns_gethostbyname(domain_internal,&resolved,get_dns_reponse, NULL);
@@ -121,13 +122,14 @@ err_t tcpRecvCallback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
         close_connection();
         tcp_recved(my_pcb,sizeof(p->payload) / sizeof(char*));
         pbuf_free(p);
+        cyw43_arch_lwip_end();
         return ERR_CLSD;
     } else {
         callback_fun(p->payload);
         tcp_recved(my_pcb,sizeof(p->payload) / sizeof(char*));
         pbuf_free(p);
+        cyw43_arch_lwip_end();
     }
-    cyw43_arch_lwip_end();
     return 0;
 }
 
@@ -163,7 +165,12 @@ uint32_t tcp_send_packet(void)
 void close_connection(void)
 {
     cyw43_arch_lwip_begin();
-    puts("Closing Connection\n");
+    printf("Closing Connection\n");
+    tcp_arg(my_pcb, NULL);
+    tcp_poll(my_pcb, NULL, 0);
+    tcp_sent(my_pcb, NULL);
+    tcp_recv(my_pcb, NULL);
+    tcp_err(my_pcb, NULL);
     err_t error = tcp_close(my_pcb);
     printf("Closing Error: %i\n", error);
     if (error != ERR_OK) {

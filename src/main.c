@@ -24,28 +24,32 @@
 #include "eink_display_266.h"
 #include "http_client.h"
 #include "tiny-json.h"
+#include "lwip/apps/http_client.h"
 
 //File with custom config data
 #include "config.h"
 
-#define WAIT_WIFI_FAILURE_MS 3000
-#define SLEEP_TIME_MS 60000
+#define WAIT_WIFI_FAILURE_S 3
+#define SLEEP_TIME_S 120
 
 int current_id = 0;
-char values [3][32];
-char update_times[3][150];
+char values [NUM_SENSORS][32];
+char update_times[NUM_SENSORS][150];
 bool processing = false;
+json_t mem[32];
+char * string_copy;
 
 void callback(const char * string);
 void callback_error(const char * error);
 void callback_closed(const char * error);
-
 
 int main(void)
 
 {
     int reqnum = 0;
     uint16_t counter = 0;
+    processing = false;
+    current_id = 0;
     char path[256];
     char counter_str[7];
     bool wifi_init = false;
@@ -58,11 +62,12 @@ int main(void)
     {
         //Initialise Wifi if needed
         if (wifi_init==false)
-        {
+        {                
+            printf("Reinitialise Wifi");
             if (cyw43_arch_init_with_country(CYW43_COUNTRY_GERMANY))
             {
                 printf("WiFi init failed");
-                sleep_ms(WAIT_WIFI_FAILURE_MS);
+                sleep_ms(WAIT_WIFI_FAILURE_S*1000);
                 continue;
             }
             cyw43_arch_enable_sta_mode();
@@ -70,12 +75,11 @@ int main(void)
             {
                 printf("failed to connect\n");
                 cyw43_arch_deinit();
-                sleep_ms(WAIT_WIFI_FAILURE_MS);
+                sleep_ms(WAIT_WIFI_FAILURE_S*1000);
                 continue;
             }
             wifi_init = true;
         }
-        printf("Attempting to connect");
         connect();
         for(int i =0; i < NUM_SENSORS; i++)
         {
@@ -87,17 +91,17 @@ int main(void)
             reqnum++;
             while(processing)
             {
-                sleep_ms(10);
+                sleep_ms(100);
                 cyw43_arch_poll();
             }
         }
         close_connection();
-        
         //TODO Implement deactivation of the wifi during the sleep times
-        //cyw43_arch_poll();
-        //cyw43_arch_deinit();
-        //puts("WiFi deinit, sleeping");
-        //wifi_init = false;
+        cyw43_arch_poll();
+        puts("WiFi deinit");
+        cyw43_arch_deinit();
+        wifi_init = false;
+
         counter++;
         sprintf(&counter_str[0],"%06d",counter);
         //Now we paint the data that we downloaded
@@ -113,7 +117,7 @@ int main(void)
         display_buffer();
 
         //Sleeping time
-        sleep_ms(SLEEP_TIME_MS);
+        sleep_ms(SLEEP_TIME_S*1000);
         puts("Waking up");
     }
 
@@ -121,10 +125,11 @@ int main(void)
     return 0;
 }
 
-json_t mem[32];
 void callback(const char * string)
 {
-    json_t const* json = json_create( string, mem, sizeof mem / sizeof *mem );
+    string_copy = strdup(string);
+    json_t const* json = json_create( string_copy, mem, sizeof mem / sizeof *mem );
+    free(string_copy);
     if ( !json ) {
         puts("Error json create.");
         return;
@@ -145,7 +150,7 @@ void callback(const char * string)
     char const* lastVal = json_getValue( lastProp );
 
     printf( "%s: %s.\n", names[current_id] ,stateVal);
-    sprintf(values[current_id], "%s", stateVal);
+    sprintf(values[current_id], "%.4s", stateVal);
     sprintf(update_times[current_id], "%.*s\n", 19,lastVal);
     update_times[current_id][10] = 0x20;
     update_times[current_id][19] = 0x0;
