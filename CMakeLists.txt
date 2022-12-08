@@ -31,13 +31,13 @@ externals/tiny-json/tiny-json.c
 )
 
 # enable usb output, disable uart output
-pico_enable_stdio_usb(hass-display 1)
-pico_enable_stdio_uart(hass-display 0)
+pico_enable_stdio_usb(hass-display 0)
+pico_enable_stdio_uart(hass-display 1)
 
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(hass-display)
 
 target_include_directories(hass-display PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(hass-display pico_lwip_core pico_cyw43_arch_lwip_poll ePaper GUI Fonts Config pico_stdlib hardware_spi)
+target_link_libraries(hass-display pico_lwip_core pico_cyw43_arch_lwip_poll ePaper GUI Fonts Config pico_stdlib hardware_spi hardware_sleep hardware_rosc hardware_rtc )
 #target_link_libraries(hass-display pico_lwip_core pico_lwip_mbedtls pico_mbedtls pico_cyw43_arch_lwip_poll ePaper GUI Fonts Config pico_stdlib hardware_spi)
 

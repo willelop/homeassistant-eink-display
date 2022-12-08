@@ -31,9 +31,18 @@
 //File with custom config data
 #include "config.h"
 
-//#define POWERSAVE_SLEEP
-#define WAIT_WIFI_FAILURE_S 3
+//Use low power sleep. Otherwise only the Wireless chip is disabled. 
+#define POWERSAVE_SLEEP
+
+//Disable the e-ink display in case of testing without it
+//#define DISABLE_SCREEN
+
+//Sleep Time between activations
 #define SLEEP_TIME_S 300
+
+//Time to wait before re-trying wireless connection
+#define WAIT_WIFI_FAILURE_S 3
+
 
 int current_id = 0;
 char values [NUM_SENSORS][32];
@@ -48,10 +57,10 @@ void callback_closed(const char * error);
 
 #ifdef POWERSAVE_SLEEP
 #include <stdlib.h>
+#include "pico/sleep.h"
 #include "hardware/clocks.h"
 #include "hardware/structs/scb.h"
 #include "hardware/watchdog.h"
-#include "pico/sleep.h"
 #include "hardware/rtc.h"
 #include "hardware/rosc.h"
 static bool awake;
@@ -94,8 +103,8 @@ static void rtc_sleep(void) {
             .day   = 05,
             .dotw  = 5, // 0 is Sunday, so 5 is Friday
             .hour  = 15,
-            .min   = 45,
-            .sec   = 30
+            .min   = 50,
+            .sec   = 00
     };
     // Start the RTC
     rtc_init();
@@ -123,8 +132,9 @@ int main(void)
     char path[256];
     char counter_str[7];
     bool wifi_init = false;
-  
+#ifndef DISABLE_SCREEN 
     init_display();
+#endif
     prepareBuffer();
     my_http_client_init(SERVER_IP, SERVER_PORT, &callback, &callback_error, &callback_closed);
 
@@ -184,7 +194,10 @@ int main(void)
             add_footer(update_times[i], i, 1);
         }
         add_grid();
+#ifndef DISABLE_SCREEN 
         display_buffer();
+#endif
+
 #ifdef POWERSAVE_SLEEP
         uint scb_orig = scb_hw->scr;
         uint clock0_orig = clocks_hw->sleep_en0;
@@ -200,9 +213,10 @@ int main(void)
         {
             printf("Should be sleeping\n");
         }
-
+        printf("Should be sleeping\n");
         recover_from_sleep(scb_orig, clock0_orig, clock1_orig);
-        puts("Enabling Watchdot to force reboot");
+        puts("End of Loop");
+        //puts("Enabling Watchdot to force reboot");
         //Forcing reboot via watchdog
         // watchdog_enable(100, 1);
         // while(1);
